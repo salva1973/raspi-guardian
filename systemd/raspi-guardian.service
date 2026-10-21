@@ -1,0 +1,29 @@
+[Unit]
+Description=Raspi Guardian - Telegram system and UPS diagnostics
+Wants=network-online.target
+After=network-online.target nut-server.service
+
+[Service]
+Type=simple
+User=raspi-guardian
+Group=raspi-guardian
+StateDirectory=raspi-guardian
+StateDirectoryMode=0700
+WorkingDirectory=/opt/raspi-guardian
+EnvironmentFile=/etc/raspi-guardian/telegram.env
+Environment=NODE_ENV=production
+ExecStart=/usr/bin/node /opt/raspi-guardian/src/guardian.mjs
+Restart=on-failure
+RestartSec=10
+TimeoutStopSec=5
+KillMode=control-group
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+UMask=0077
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

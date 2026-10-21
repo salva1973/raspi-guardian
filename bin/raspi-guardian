@@ -1,0 +1,7 @@
+#!/usr/bin/env node
+import('../src/cli.mjs').then(async ({ runCli }) => {
+  process.exitCode = await runCli(process.argv.slice(2));
+}).catch(() => {
+  console.error('Error: unable to run the local CLI. Check Node.js and the installed modules.');
+  process.exitCode = 1;
+});
