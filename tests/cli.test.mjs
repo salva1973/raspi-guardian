@@ -510,7 +510,9 @@ test('colori, Unicode, spaziatura e NO_COLOR preservati anche in italiano', asyn
   assert.match(colored.out, /\x1b\[1;36m🛡️ Raspi Guardian/);
   assert.match(colored.out, /🖥️ Sistema/);
   const plain = await invoke(['status'], { ...env, NO_COLOR: '' }, true);
-  assert.equal(colored.out.replace(/\x1b\[[0-9;]*m/g, ''), plain.out);
+  // Two separate runs read live host metrics (uptime, load, RAM): compare layout, not numbers.
+  const layout = text => text.replace(/\d+/g, '#');
+  assert.equal(layout(colored.out.replace(/\x1b\[[0-9;]*m/g, '')), layout(plain.out));
   assert.doesNotMatch(plain.out, ESCAPE);
   assert.match(plain.out, /^╭─ 🛡️ Raspi Guardian/);
   assert.match(plain.out, /\n│  /);
