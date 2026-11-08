@@ -58,7 +58,7 @@ async function invoke(args, env = {}, isTTY = false) {
   return { code, out, error };
 }
 
-test('help e nessun argomento: nessun token, configurazione diagnostica o processo', async context => {
+test('help and no arguments: no token, diagnostic configuration or process', async context => {
   const { calls, reads } = offline(context);
   for (const args of [[], ['help']]) {
     const result = await invoke(args, { GUARDIAN_UPS_NAME: 'invalid!' });
@@ -71,7 +71,7 @@ test('help e nessun argomento: nessun token, configurazione diagnostica o proces
   assert.equal(reads.length, 0);
 });
 
-test('comandi diagnostici condivisi: dati, target NUT, mount e Docker in sola lettura', async context => {
+test('shared diagnostic commands: data, NUT target, mounts and Docker, read-only', async context => {
   const { calls } = offline(context);
   const env = { ...environment, GUARDIAN_DOCKER_ENABLED: 'true', GUARDIAN_IMPORTANT_MOUNTS: '/,/srv/data' };
   for (const [view, expected] of [
@@ -101,7 +101,7 @@ test('comandi diagnostici condivisi: dati, target NUT, mount e Docker in sola le
   }
 });
 
-test('system, disks e docker non richiedono un UPS; Telegram e soglia ignorati', async context => {
+test('system, disks and docker do not require a UPS; Telegram and threshold ignored', async context => {
   offline(context);
   const env = { TELEGRAM_BOT_TOKEN: 'invalid-secret', TELEGRAM_CHAT_ID: 'invalid', GUARDIAN_SHUTDOWN_WARNING_SECONDS: 'invalid' };
   for (const view of ['system', 'disks', 'docker']) {
@@ -111,7 +111,7 @@ test('system, disks e docker non richiedono un UPS; Telegram e soglia ignorati',
   }
 });
 
-test('colori ANSI solo su TTY; NO_COLOR anche vuota, TERM=dumb, pipe e --no-color', async context => {
+test('ANSI colors only on a TTY; NO_COLOR even when empty, TERM=dumb, pipes and --no-color', async context => {
   offline(context);
   const colored = await invoke(['ups'], environment, true);
   assert.match(colored.out, /\x1b\[1;36m/);
@@ -128,7 +128,7 @@ test('colori ANSI solo su TTY; NO_COLOR anche vuota, TERM=dumb, pipe e --no-colo
   assert.doesNotMatch((await invoke(['help'], { NO_COLOR: '' }, true)).out, ESCAPE);
 });
 
-test('comandi e argomenti invalidi: errore 2 prima di qualunque diagnostica', async context => {
+test('invalid commands and arguments: exit 2 before any diagnostics', async context => {
   const { calls, reads } = offline(context);
   for (const args of [['lang', 'fr'], ['/ups'], ['unknown-secret'], ['ups', 'extra'], ['--color'], ['status;whoami']]) {
     const result = await invoke(args, environment);
@@ -141,7 +141,7 @@ test('comandi e argomenti invalidi: errore 2 prima di qualunque diagnostica', as
   assert.equal(reads.length, 0);
 });
 
-test('status e ups richiedono la destinazione NUT, validazione condivisa senza valori negli errori', async context => {
+test('status and ups require the NUT target; shared validation without values in errors', async context => {
   const { calls } = offline(context);
   for (const view of ['status', 'ups']) {
     for (const value of [undefined, '', '-l', 'ups;whoami', 'ups@host:65536', 'private-invalid!']) {
@@ -159,7 +159,7 @@ test('status e ups richiedono la destinazione NUT, validazione condivisa senza v
   }
 });
 
-test('Docker disabilitato per default: comando esplicito rifiutato, status senza accesso al socket', async context => {
+test('Docker disabled by default: explicit command rejected, status without socket access', async context => {
   const { calls } = offline(context);
   for (const docker of [undefined, 'false']) {
     const env = { ...environment, ...(docker === undefined ? {} : { GUARDIAN_DOCKER_ENABLED: docker }) };
@@ -171,7 +171,7 @@ test('Docker disabilitato per default: comando esplicito rifiutato, status senza
   assert.ok(calls.every(call => call.file !== '/usr/bin/docker'));
 });
 
-test('opzioni diagnostiche errate: exit 2, nessun valore sensibile o processo', async context => {
+test('invalid diagnostic options: exit 2, no sensitive value or process', async context => {
   const { calls } = offline(context);
   for (const env of [{ GUARDIAN_DOCKER_ENABLED: 'secret!' }, { GUARDIAN_IMPORTANT_MOUNTS: 'secret!' }]) {
     const result = await invoke(['status'], { ...environment, ...env });
@@ -182,7 +182,7 @@ test('opzioni diagnostiche errate: exit 2, nessun valore sensibile o processo', 
   assert.equal(calls.length, 0);
 });
 
-test('client mancanti, timeout o permessi negati: exit 1 e riepilogo parziale leggibile', async context => {
+test('missing clients, timeouts or denied permissions: exit 1 and a readable partial summary', async context => {
   offline(context, { fail: ['upsc', 'findmnt', 'docker'] });
   const env = { ...environment, GUARDIAN_DOCKER_ENABLED: 'true' };
   for (const view of ['ups', 'disks', 'docker', 'status']) {
@@ -195,7 +195,7 @@ test('client mancanti, timeout o permessi negati: exit 1 e riepilogo parziale le
   }
 });
 
-test('letture NUT e JSON non valide: errore; sensori assenti: n/a come nel bot', async context => {
+test('invalid NUT and JSON readings: error; missing sensors: n/a as in the bot', async context => {
   offline(context, { fail: ['system'], outputs: { upsc: 'ups.status: OL OB', findmnt: 'invalid JSON', docker: 'invalid JSON' } });
   for (const view of ['ups', 'disks', 'docker']) {
     assert.equal((await invoke([view], { ...environment, GUARDIAN_DOCKER_ENABLED: 'true' })).code, 1);
@@ -206,7 +206,7 @@ test('letture NUT e JSON non valide: errore; sensori assenti: n/a come nel bot',
   assert.match(result.out, /Temperature: n\/a/);
 });
 
-test('testo terminale: nessuna iniezione ANSI o reinterpretazione del markup escapato', () => {
+test('terminal text: no ANSI injection or reinterpretation of escaped markup', () => {
   const raw = '<b>Header</b>\n<code>&lt;b&gt; &amp; &quot; &#39;</code>\x1b[31m\x9b2J\r';
   const text = terminalText(raw);
   assert.equal(text, 'Header\n<b> & " \'[31m2J');
@@ -243,7 +243,7 @@ async function launch(file, args, options) {
   }
 }
 
-test('entrypoint reale e link nel PATH: termina senza token, rete o avvio Telegram', async context => {
+test('real entry point and PATH link: exits without token, network or Telegram startup', async context => {
   const directory = await fs.mkdtemp(join(tmpdir(), 'raspi-guardian-cli-'));
   context.after(() => fs.rm(directory, { recursive: true, force: true }));
   const link = join(directory, 'raspi-guardian');
@@ -272,7 +272,7 @@ async function languageEnvironment(context) {
   return { HOME: join(directory, 'home'), XDG_CONFIG_HOME: join(directory, 'config') };
 }
 
-test('default CLI inglese: help e lang senza creare impostazioni', async context => {
+test('English CLI default: help and lang without creating settings', async context => {
   const env = await languageEnvironment(context);
   offline(context);
   assert.match((await invoke(['help'], env)).out, /Usage: raspi-guardian/);
@@ -280,7 +280,7 @@ test('default CLI inglese: help e lang senza creare impostazioni', async context
   await assert.rejects(fs.stat(new CliSettings(env).directory), { code: 'ENOENT' });
 });
 
-test('CLI EN → IT → EN: conferma immediata e preferenza ricaricata a ogni invocazione', async context => {
+test('CLI EN → IT → EN: immediate confirmation and preference reloaded on every invocation', async context => {
   const env = await languageEnvironment(context);
   assert.match((await invoke(['lang'], env)).out, /English \(en\)/);
   for (const [language, confirmation, help] of [
@@ -296,7 +296,7 @@ test('CLI EN → IT → EN: conferma immediata e preferenza ricaricata a ogni in
   }
 });
 
-test('nuovo processo e nuova sessione SSH: HOME fallback, XDG e utenti indipendenti', async context => {
+test('new process and new SSH session: HOME fallback, XDG and independent users', async context => {
   const env = await languageEnvironment(context);
   const other = await languageEnvironment(context);
   const executable = resolve('bin/raspi-guardian');
@@ -320,7 +320,7 @@ test('nuovo processo e nuova sessione SSH: HOME fallback, XDG e utenti indipende
   assert.match(await session(['lang'], homeOnly), /Italiano/);
 });
 
-test('preferenze CLI e Telegram separate anche con la stessa directory di stato', async context => {
+test('CLI and Telegram preferences stay separate even with the same state directory', async context => {
   const env = await languageEnvironment(context);
   const cli = new CliSettings(env);
   await invoke(['lang', 'it'], env);
@@ -337,7 +337,7 @@ test('preferenze CLI e Telegram separate anche con la stessa directory di stato'
   assert.deepEqual(JSON.parse(await fs.readFile(cli.path, 'utf8')), { language: 'en' });
 });
 
-test('tutte le viste CLI IT/EN: intestazioni, valori descrittivi e dati tecnici', async context => {
+test('all CLI views IT/EN: headings, descriptive values and technical data', async context => {
   const env = { ...await languageEnvironment(context), ...environment,
     GUARDIAN_DOCKER_ENABLED: 'true', GUARDIAN_IMPORTANT_MOUNTS: '/,/srv/data' };
   offline(context, { outputs: { docker: [
@@ -379,7 +379,7 @@ test('tutte le viste CLI IT/EN: intestazioni, valori descrittivi e dati tecnici'
   }
 });
 
-test('errori CLI tradotti IT/EN: argomenti, configurazione, Docker e diagnostica', async context => {
+test('translated CLI errors IT/EN: arguments, configuration, Docker and diagnostics', async context => {
   const env = await languageEnvironment(context);
   offline(context, { fail: ['upsc', 'findmnt', 'docker', 'system'] });
   for (const language of ['it', 'en']) {
@@ -404,7 +404,7 @@ test('errori CLI tradotti IT/EN: argomenti, configurazione, Docker e diagnostica
   }
 });
 
-test('preferenze CLI mancanti, corrotte, troppo grandi o non valide: inglese e recupero', async context => {
+test('missing, corrupt, oversized or invalid CLI preferences: English and recovery', async context => {
   const env = await languageEnvironment(context);
   const settings = new CliSettings(env);
   assert.match((await invoke(['lang'], env)).out, /English/);
@@ -422,7 +422,7 @@ test('preferenze CLI mancanti, corrotte, troppo grandi o non valide: inglese e r
   assert.match((await invoke(['help'], env)).out, /Uso:/);
 });
 
-test('scrittura CLI privata e atomica: solo lingua, nessuna credenziale e nessun temporaneo', async context => {
+test('private and atomic CLI write: language only, no credentials and no temporary files', async context => {
   const env = { ...await languageEnvironment(context), TELEGRAM_BOT_TOKEN: 'fictional-secret' };
   const settings = new CliSettings(env);
   await invoke(['lang', 'en'], env);
@@ -447,7 +447,7 @@ test('scrittura CLI privata e atomica: solo lingua, nessuna credenziale e nessun
   assert.deepEqual(await fs.readdir(settings.directory), ['cli.json']);
 });
 
-test('salvataggio CLI fallito: errore tradotto, preferenza intatta e temporanei rimossi', async context => {
+test('failed CLI save: translated error, preference intact and temporary files removed', async context => {
   const env = await languageEnvironment(context);
   const settings = new CliSettings(env);
   for (const language of ['it', 'en']) {
@@ -469,7 +469,7 @@ test('salvataggio CLI fallito: errore tradotto, preferenza intatta e temporanei 
   }
 });
 
-test('sicurezza CLI: symlink, directory al posto del file e permessi pubblici', async context => {
+test('CLI safety: symlinks, a directory instead of the file and public permissions', async context => {
   const env = await languageEnvironment(context);
   const settings = new CliSettings(env);
   await invoke(['lang', 'en'], env);
@@ -502,7 +502,7 @@ test('sicurezza CLI: symlink, directory al posto del file e permessi pubblici', 
   assert.match((await invoke(['lang'], env)).out, /Italiano/);
 });
 
-test('colori, Unicode, spaziatura e NO_COLOR preservati anche in italiano', async context => {
+test('colors, Unicode, spacing and NO_COLOR preserved in Italian too', async context => {
   const env = { ...await languageEnvironment(context), ...environment };
   await invoke(['lang', 'it'], env);
   offline(context);

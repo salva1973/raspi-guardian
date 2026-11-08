@@ -10,12 +10,12 @@ function colorsEnabled(env, output, noColor) {
   return Boolean(output.isTTY && env.TERM !== 'dumb' && env.NO_COLOR === undefined && !noColor);
 }
 
-// Adatta soltanto il markup prodotto dal motore condiviso. Decodifica dopo i tag:
-// dati come &lt;b&gt; restano testo, mai markup o sequenze di controllo terminale.
+// Adapts only the markup produced by the shared engine. Decodes after the tags:
+// data such as &lt;b&gt; stays text, never markup or terminal control sequences.
 export function terminalText(text, color = false) {
   return text
     .replace(/[\x00-\x09\x0b-\x1f\x7f-\x9f]/g, '')
-    // Presentazione emoji per le icone testuali: larghezza coerente e spazio esplicito.
+    // Emoji presentation for text icons: consistent width and explicit spacing.
     .replace(/(<b>[🖥🛡])[\uFE0E\uFE0F]? */gu, '$1\uFE0F ')
     .replace(/<\/?(b|i|code)>/g, (tag, kind) => {
       if (!color) return '';

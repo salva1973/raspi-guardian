@@ -13,7 +13,7 @@ function validUpsName(value) {
     /^[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?$/.test(label));
 }
 
-// Opzioni condivise; nessuna lettura di file o dipendenza da Telegram.
+// Shared options; no file reads or Telegram dependency.
 export function loadDiagnosticConfig(env, { requireUps = true, language = 'en' } = {}) {
   if ((requireUps || env.GUARDIAN_UPS_NAME !== undefined) && !validUpsName(env.GUARDIAN_UPS_NAME)) {
     throw new Error(t(language, 'invalidUpsName'));

@@ -5,7 +5,7 @@ import { t } from './i18n.mjs';
 
 const LOCAL_TIMEOUT_MS = 5_000;
 const MAX_TEXT = 3_800;
-// La destinazione UPS è validata dalla configurazione. I processi figli non ereditano i segreti.
+// The UPS target is validated by the configuration. Child processes do not inherit secrets.
 const COMMANDS = {
   disks: ['/usr/bin/findmnt', ['--json', '--list', '--df', '--bytes', '--output',
     'TARGET,SOURCE,FSTYPE,SIZE,AVAIL,USE%']],
@@ -66,7 +66,7 @@ export function parseUps(text) {
     return colon < 0 ? [] : [[line.slice(0, colon).trim(), line.slice(colon + 1).trim()]];
   }));
   const flags = new Set((data['ups.status'] ?? '').split(/\s+/));
-  // OL e OB simultanei o entrambi assenti non confermano l'alimentazione.
+  // OL and OB together, or both missing, do not confirm the power state.
   const power = flags.has('OB') && !flags.has('OL') ? 'battery'
     : flags.has('OL') && !flags.has('OB') ? 'online' : 'unknown';
   if (power === 'unknown') throw new Error('Stato alimentazione UPS non valido.');
@@ -117,7 +117,7 @@ async function systemText(signal, language) {
   ].join('\n');
 }
 
-// Taglia soltanto righe complete, mantenendo validi i tag HTML e le entità.
+// Cuts only complete lines, keeping HTML tags and entities valid.
 export function compactRows(header, rows, language = 'en') {
   let text = header;
   for (let i = 0; i < rows.length; i++) {
@@ -139,7 +139,7 @@ export function disksText(output, importantMounts, language = 'en') {
   const warnings = missing.length
     ? t(language, 'missingMounts', { count: missing.length })
     : t(language, 'mountsPresent');
-  // Prima i mount importanti, poi gli altri. Pseudo-filesystem esclusi da findmnt --df.
+  // Important mounts first, then the others. Pseudo-filesystems are excluded by findmnt --df.
   mounts.sort((a, b) => Number(importantMounts.includes(b.target)) - Number(importantMounts.includes(a.target)));
   return compactRows(`<b>💾 Filesystem</b>\n${warnings}`, [
     ...missing.map(p => `⚠️ ${t(language, 'missing')}: <code>${field(p, language)}</code>`),
@@ -182,7 +182,7 @@ export async function diagnosticReport(view, config, signal, language = 'en') {
   if (view === 'status') {
     const views = ['ups', 'system', 'disks', ...(config.dockerEnabled ? ['docker'] : [])];
     const sections = await Promise.all(views.map(v => diagnostic(v, config, signal, language, failures)));
-    // Riepilogo breve condiviso; le viste dedicate mostrano i dettagli.
+    // Short shared summary; the dedicated views show the details.
     const summaries = sections.map((text, i) => text.split('\n').slice(0, [4, 6, 6, 2][i]).join('\n'));
     return { text: `<b>🛡 Raspi Guardian</b>\n\n${summaries.join('\n\n')}`, failures };
   }

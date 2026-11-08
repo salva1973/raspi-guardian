@@ -5,7 +5,7 @@ import { t } from './i18n.mjs';
 import { Settings } from './settings.mjs';
 import { loadDiagnosticConfig } from './config.mjs';
 import { compactRows, diagnosticReport, duration, number, quantity, readUps } from './diagnostics.mjs';
-// Compatibilità con le importazioni esistenti.
+// Compatibility with existing imports.
 export { disksText, dockerText, html, parseUps, upsText } from './diagnostics.mjs';
 
 const UPS_INTERVAL_MS = 5_000;
@@ -108,7 +108,7 @@ function telegramClient(config, signal) {
     if (!response.ok || !body.ok) {
       const retryAfter = Math.min(3600, number(body.parameters?.retry_after) ?? 0);
       cooldownUntil = performance.now() + retryAfter * 1000;
-      // Non propagare descrizioni o risposte remote: potrebbero contenere dati sensibili.
+      // Do not propagate remote descriptions or responses: they may contain sensitive data.
       const code = typeof body.description === 'string' && body.description.includes('message is not modified')
         ? 'MESSAGE_NOT_MODIFIED' : body.error_code ?? response.status;
       throw new TelegramError(code, retryAfter);
@@ -121,7 +121,7 @@ async function pause(ms, signal) {
   await delay(ms, undefined, { signal });
 }
 
-// Stato solo in memoria, distinto per ogni episodio di alimentazione a batteria.
+// In-memory state only, separate for each on-battery episode.
 export class UpsMonitor {
   outageSince = null;
   sent = new Set();
@@ -162,7 +162,7 @@ export class UpsMonitor {
         this.outageSince = null;
         this.sent.clear();
       }
-      // FSD può restare attivo anche al ritorno della rete.
+      // FSD can stay active even after mains power returns.
       if (ups.critical && !this.criticalSent) {
         await notify(t(getLanguage(), 'criticalOnline'));
         this.criticalSent = true;
@@ -294,7 +294,7 @@ export async function main({ stateDirectory } = {}) {
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
-  // Non stampare stack/errori fetch: gli URL delle richieste includono il token.
+  // Do not print stacks/fetch errors: request URLs include the token.
   main().catch(() => {
     console.error('Errore interno. Nessun dettaglio sensibile registrato.');
     process.exitCode = 1;

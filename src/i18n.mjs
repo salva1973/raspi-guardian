@@ -132,6 +132,6 @@ $HOME/.config/raspi-guardian/cli.json. Telegram language is independent.
 export function t(language = 'en', key, values = {}) {
   const template = translations[language]?.[key] ?? translations.en[key];
   if (typeof template !== 'string') throw new Error('Unknown translation key.');
-  // I valori HTML dinamici vanno già escapati dal chiamante.
+  // Dynamic HTML values must already be escaped by the caller.
   return template.replace(/\{(\w+)\}/g, (_, name) => String(values[name]));
 }

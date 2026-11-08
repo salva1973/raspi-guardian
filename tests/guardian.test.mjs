@@ -11,7 +11,7 @@ import {
   authorizedAction, disksText, dockerText, html, loadConfig, main, parseUps, render, UpsMonitor, upsText,
 } from '../src/guardian.mjs';
 
-// Dati fittizi: nessun file privato, processo diagnostico o collegamento di rete.
+// Fake data: no private file, diagnostic process or network connection.
 const env = {
   TELEGRAM_BOT_TOKEN: '123456:dummy_for_offline_tests',
   TELEGRAM_CHAT_ID: '-12345',
@@ -37,8 +37,8 @@ async function temporaryState(context) {
   return directory;
 }
 
-// Avvia soltanto main con rete, processi e letture diagnostiche simulati.
-// I soli file reali usati dai test sono nella directory temporanea di stato.
+// Starts only main, with simulated network, processes and diagnostic readings.
+// The only real files used by the tests are in the temporary state directory.
 async function offlineBot(updates, stateDirectory, { failDiagnostics = false, environment = {}, commands = [] } = {}) {
   const originalEnv = Object.fromEntries(Object.keys(env).map(key => [key, process.env[key]]));
   for (const [key, value] of Object.entries({ ...env, ...environment })) {
@@ -101,7 +101,7 @@ async function offlineBot(updates, stateDirectory, { failDiagnostics = false, en
 
 const replies = calls => calls.filter(c => ['sendMessage', 'editMessageText'].includes(c.method)).map(c => c.payload);
 
-test('configurazione e valori non validi non espongono credenziali', () => {
+test('invalid configuration and values do not expose credentials', () => {
   assert.deepEqual(config.importantMounts, ['/', '/boot/firmware']);
   assert.deepEqual(loadConfig({ ...env, GUARDIAN_IMPORTANT_MOUNTS: '/,/srv/data/,/srv/data' }).importantMounts,
     ['/', '/srv/data']);
@@ -111,7 +111,7 @@ test('configurazione e valori non validi non espongono credenziali', () => {
   assert.throws(() => loadConfig({ ...env, GUARDIAN_IMPORTANT_MOUNTS: '/,relative' }));
 });
 
-test('autorizzazione obbligatoria per chat e utente, anche sui pulsanti', () => {
+test('authorization required for chat and user, buttons included', () => {
   assert.equal(authorizedAction(message('/ups'), config).view, 'ups');
   assert.equal(authorizedAction(callback('disks'), config).view, 'disks');
   for (const update of [
@@ -125,7 +125,7 @@ test('autorizzazione obbligatoria per chat e utente, anche sui pulsanti', () => 
   ]) assert.equal(authorizedAction(update, config), null);
 });
 
-test('NUT: OL/OB verificati, letture incomplete o contraddittorie rifiutate', () => {
+test('NUT: OL/OB verified, incomplete or contradictory readings rejected', () => {
   assert.equal(sample('OL CHRG').power, 'online');
   assert.equal(sample('OB DISCHRG').power, 'battery');
   assert.equal(sample('OB LB').critical, true);
@@ -136,7 +136,7 @@ test('NUT: OL/OB verificati, letture incomplete o contraddittorie rifiutate', ()
   assert.match(upsText(parseUps('ups.status: OL')), /Reported runtime: n\/a/);
 });
 
-test('blackout a 30 s, preavviso a 570 s, ripristino valido e deduplicazione per episodio', async () => {
+test('outage at 30 s, warning at 570 s, valid restore and per-episode deduplication', async () => {
   const monitor = new UpsMonitor(570);
   const messages = [];
   const send = async text => messages.push(text);
@@ -163,17 +163,17 @@ test('blackout a 30 s, preavviso a 570 s, ripristino valido e deduplicazione per
   assert.equal(messages.length, 4);
   assert.match(messages[3], /Mains power restored/);
   await monitor.observe(sample('OB LB'), 630_000, send);
-  assert.equal(messages.length, 5); // LB immediato anche prima dei 30 s.
+  assert.equal(messages.length, 5); // LB is immediate, even before 30 s.
   await monitor.observe(sample('OB LB'), 660_000, send);
-  assert.equal(messages.length, 6); // Nuovo blackout, una nuova notifica.
+  assert.equal(messages.length, 6); // New outage, one new notification.
 });
 
-test('nessun falso ripristino su lettura fallita; tempo osservato conservato', async () => {
+test('no false restore on a failed reading; observed time preserved', async () => {
   const monitor = new UpsMonitor();
   const messages = [];
   const send = async text => messages.push(text);
   await monitor.observe(sample('OB'), 0, send);
-  // Come nel ciclo reale, una lettura fallita non viene passata al monitor.
+  // As in the real loop, a failed reading is not passed to the monitor.
   assert.throws(() => parseUps('Error: connection failure'));
   assert.equal(monitor.outageSince, 0);
   assert.equal(messages.length, 0);
@@ -184,7 +184,7 @@ test('nessun falso ripristino su lettura fallita; tempo osservato conservato', a
   assert.match(messages[1], /restored/);
 });
 
-test('invii falliti vengono ritentati, quelli riusciti non vengono ripetuti', async () => {
+test('failed sends are retried, successful ones are not repeated', async () => {
   const monitor = new UpsMonitor();
   const sent = [];
   await monitor.observe(sample('OB'), 0, async () => {});
@@ -199,7 +199,7 @@ test('invii falliti vengono ritentati, quelli riusciti non vengono ripetuti', as
   assert.equal(sent.length, 2);
 });
 
-test('FSD persistente dopo il ripristino non duplica l’avviso critico', async () => {
+test('FSD persisting after restore does not duplicate the critical alert', async () => {
   const monitor = new UpsMonitor();
   const sent = [];
   const send = async text => sent.push(text);
@@ -211,7 +211,7 @@ test('FSD persistente dopo il ripristino non duplica l’avviso critico', async 
   assert.match(sent[1], /Mains power restored/);
 });
 
-test('escaping HTML, mount realmente assenti, capacità e limite messaggi', () => {
+test('HTML escaping, truly missing mounts, capacity and message limit', () => {
   assert.equal(html('<tag>&'), '&lt;tag&gt;&amp;');
   const root = { target: '/', source: '/dev/root', fstype: 'ext4', size: 1024 ** 3, avail: 100 * 1024 ** 2, 'use%': '91%' };
   const output = JSON.stringify({ filesystems: [root, { ...root, target: '/mnt/<data>&' }] });
@@ -228,7 +228,7 @@ test('escaping HTML, mount realmente assenti, capacità e limite messaggi', () =
   assert.match(compact, /more entries not shown/);
 });
 
-test('Docker: conteggio, health esplicita e healthcheck assente', () => {
+test('Docker: count, explicit health and missing healthcheck', () => {
   assert.match(dockerText(''), /Running containers: <b>0<\/b>/);
   const output = [
     { Names: '<web>&', Status: 'Up 1 hour (healthy)' },
@@ -243,7 +243,7 @@ test('Docker: conteggio, health esplicita e healthcheck assente', () => {
   }
 });
 
-test('flusso completo simulato: comandi, pulsanti, isolamento segreti e SIGTERM durante polling', async context => {
+test('full simulated flow: commands, buttons, secret isolation and SIGTERM during polling', async context => {
   const stateDirectory = await temporaryState(context);
   const originalEnv = Object.fromEntries(Object.keys(env).map(key => [key, process.env[key]]));
   Object.assign(process.env, env);
@@ -330,7 +330,7 @@ test('flusso completo simulato: comandi, pulsanti, isolamento segreti e SIGTERM 
   }
 });
 
-test('conflitto polling: uscita con errore e log senza token o descrizioni remote', async context => {
+test('polling conflict: error exit and logs without token or remote descriptions', async context => {
   const stateDirectory = await temporaryState(context);
   const originalEnv = Object.fromEntries(Object.keys(env).map(key => [key, process.env[key]]));
   const originalExitCode = process.exitCode;
@@ -361,7 +361,7 @@ test('conflitto polling: uscita con errore e log senza token o descrizioni remot
   }
 });
 
-test('dizionario IT/EN completo, parametri e default inglese', async () => {
+test('complete IT/EN dictionary, parameters and English default', async () => {
   assert.deepEqual(Object.keys(translations.it).sort(), Object.keys(translations.en).sort());
   for (const key of Object.keys(translations.it)) {
     const parameters = text => [...text.matchAll(/\{(\w+)\}/g)].map(m => m[1]).sort();
@@ -375,12 +375,12 @@ test('dizionario IT/EN completo, parametri e default inglese', async () => {
   assert.equal(DEFAULT_STATE_DIRECTORY, '/var/lib/raspi-guardian');
 });
 
-test('file assente o non valido: default inglese e recupero senza esporre contenuti', async context => {
+test('missing or invalid file: English default and recovery without exposing contents', async context => {
   const directory = await temporaryState(context);
   const settings = new Settings(directory);
   await settings.load();
   assert.equal(settings.language, 'en');
-  assert.deepEqual(await fs.readdir(directory), []); // La lettura non crea file.
+  assert.deepEqual(await fs.readdir(directory), []); // Reading does not create files.
   const logs = [];
   const warning = mock.method(console, 'warn', text => logs.push(text));
   context.after(() => warning.mock.restore());
@@ -401,7 +401,7 @@ test('file assente o non valido: default inglese e recupero senza esporre conten
   assert.equal(restarted.language, 'en');
 });
 
-test('salvataggio atomico, permessi 0600, solo lingua e persistenza IT → EN → IT', async context => {
+test('atomic save, 0600 permissions, language only and IT → EN → IT persistence', async context => {
   const directory = await temporaryState(context);
   const settings = new Settings(directory);
   await settings.setLanguage('it');
@@ -410,7 +410,7 @@ test('salvataggio atomico, permessi 0600, solo lingua e persistenza IT → EN �
     assert.equal(target, settings.path);
     assert.equal((await fs.stat(source)).mode & 0o777, 0o600);
     assert.deepEqual(JSON.parse(await fs.readFile(source, 'utf8')), { language: 'en' });
-    // Fino al rename il file precedente è completo e invariato.
+    // Until the rename, the previous file is complete and unchanged.
     assert.deepEqual(JSON.parse(await fs.readFile(target, 'utf8')), { language: 'it' });
     await originalRename(source, target);
   });
@@ -435,7 +435,7 @@ test('salvataggio atomico, permessi 0600, solo lingua e persistenza IT → EN �
   assert.equal(settings.language, 'it');
 });
 
-test('scrittura fallita: file precedente integro, lingua conservata, temporanei rimossi', async context => {
+test('failed write: previous file intact, language kept, temporary files removed', async context => {
   const directory = await temporaryState(context);
   const settings = new Settings(directory);
   await settings.setLanguage('en');
@@ -452,7 +452,7 @@ test('scrittura fallita: file precedente integro, lingua conservata, temporanei 
   }
 });
 
-test('settings non segue symlink né sovrascrive il file puntato', async context => {
+test('settings neither follows symlinks nor overwrites the target file', async context => {
   const directory = await temporaryState(context);
   const target = join(directory, 'unrelated.json');
   await fs.writeFile(target, '{"language":"en"}');
@@ -470,7 +470,7 @@ test('settings non segue symlink né sovrascrive il file puntato', async context
   }
 });
 
-test('/lang e comandi IT → EN → IT: selettore, menu e conferme immediate', async context => {
+test('/lang and commands IT → EN → IT: selector, menu and immediate confirmations', async context => {
   const directory = await temporaryState(context);
   await new Settings(directory).setLanguage('it');
   const result = replies(await offlineBot([
@@ -492,7 +492,7 @@ test('/lang e comandi IT → EN → IT: selettore, menu e conferme immediate', a
   assert.deepEqual(JSON.parse(await fs.readFile(join(directory, 'settings.json'), 'utf8')), { language: 'it' });
 });
 
-test('pulsanti lingua IT → EN → IT autorizzati e aggiornamento delle vecchie tastiere', async context => {
+test('authorized IT → EN → IT language buttons and refresh of old keyboards', async context => {
   const directory = await temporaryState(context);
   await new Settings(directory).setLanguage('it');
   const calls = await offlineBot([
@@ -510,7 +510,7 @@ test('pulsanti lingua IT → EN → IT autorizzati e aggiornamento delle vecchie
   for (const payload of result) assert.equal(payload.message_id, 5);
 });
 
-test('riavvio simulato: il bot ricarica la lingua e usa STATE_DIRECTORY', async context => {
+test('simulated restart: the bot reloads the language and uses STATE_DIRECTORY', async context => {
   const directory = await temporaryState(context);
   await offlineBot([message('/lang en')], directory);
   const originalStateDirectory = process.env.STATE_DIRECTORY;
@@ -526,7 +526,7 @@ test('riavvio simulato: il bot ricarica la lingua e usa STATE_DIRECTORY', async 
   }
 });
 
-test('cambio lingua vietato a chat, utenti e bot non autorizzati; callback e argomenti limitati', async context => {
+test('language change denied to unauthorized chats, users and bots; callbacks and arguments limited', async context => {
   const directory = await temporaryState(context);
   const rejected = [
     message('/lang en', { from: { id: 1 } }), message('/lang en', { chat: { id: 1 } }),
@@ -546,7 +546,7 @@ test('cambio lingua vietato a chat, utenti e bot non autorizzati; callback e arg
   assert.deepEqual(await fs.readdir(directory), []);
 });
 
-test('argomenti lingua non validi e impossibilità di salvare: errori nella lingua corrente', async context => {
+test('invalid language arguments and save failures: errors in the current language', async context => {
   const directory = await temporaryState(context);
   await new Settings(directory).setLanguage('it');
   let result = replies(await offlineBot([
@@ -555,7 +555,7 @@ test('argomenti lingua non validi e impossibilità di salvare: errori nella ling
   assert.match(result[0].text, /Usa \/lang/);
   assert.match(result[2].text, /Use \/lang/);
   assert.match(result[3].text, /Use \/lang/);
-  // Una directory al posto del file fa fallire il rename senza toccare permessi di sistema.
+  // A directory in place of the file makes the rename fail without touching system permissions.
   await fs.unlink(join(directory, 'settings.json'));
   await fs.mkdir(join(directory, 'settings.json'));
   result = replies(await offlineBot([message('/lang en'), message('/help')], directory));
@@ -577,7 +577,7 @@ test('argomenti lingua non validi e impossibilità di salvare: errori nella ling
   }
 });
 
-test('tutti i comandi e i pulsanti in inglese, dati tecnici invariati', async context => {
+test('all commands and buttons in English, technical data unchanged', async context => {
   const directory = await temporaryState(context);
   const views = ['start', 'help', 'status', 'ups', 'system', 'disks', 'docker'];
   const result = replies(await offlineBot([
@@ -607,7 +607,7 @@ test('tutti i comandi e i pulsanti in inglese, dati tecnici invariati', async co
   assert.match(compact, /more entries not shown/);
 });
 
-test('errori diagnostici inglesi e dati sistema assenti senza dettagli interni', async context => {
+test('English diagnostic errors and missing system data without internal details', async context => {
   const directory = await temporaryState(context);
   const result = replies(await offlineBot([
     message('/lang en'), ...['status', 'ups', 'system', 'disks', 'docker'].map(view => message(`/${view}`)),
@@ -621,7 +621,7 @@ test('errori diagnostici inglesi e dati sistema assenti senza dettagli interni',
   assert.match(result[3].text, /Temperature: n\/a/);
 });
 
-test('tutti gli avvisi UPS in inglese senza cambiare soglie, flag o deduplicazione', async () => {
+test('all UPS alerts in English without changing thresholds, flags or deduplication', async () => {
   const monitor = new UpsMonitor(570);
   const sent = [];
   const observe = (status, now) => monitor.observe(sample(status), now, async text => sent.push(text), () => 'en');
@@ -650,7 +650,7 @@ test('tutti gli avvisi UPS in inglese senza cambiare soglie, flag o deduplicazio
   assert.match(sent[4], /Mains available, but NUT reports LB or FSD/);
 });
 
-test('cambio lingua durante blackout: avvisi successivi aggiornati, stato e retry conservati', async () => {
+test('language change during an outage: later alerts updated, state and retries kept', async () => {
   const monitor = new UpsMonitor(570);
   let language = 'it';
   const sent = [];
@@ -673,7 +673,7 @@ test('cambio lingua durante blackout: avvisi successivi aggiornati, stato e retr
   assert.equal(sent.length, 4);
 });
 
-test('configurazione pubblica: UPS obbligatorio, Docker e preavviso disabilitati, mount generico', () => {
+test('public configuration: UPS required, Docker and warning disabled, generic mount', () => {
   const minimal = {
     TELEGRAM_BOT_TOKEN: env.TELEGRAM_BOT_TOKEN,
     TELEGRAM_CHAT_ID: env.TELEGRAM_CHAT_ID,
@@ -689,7 +689,7 @@ test('configurazione pubblica: UPS obbligatorio, Docker e preavviso disabilitati
   assert.equal(loadConfig({ ...minimal, GUARDIAN_SHUTDOWN_WARNING_SECONDS: '' }).shutdownWarningSeconds, null);
 });
 
-test('destinazioni NUT valide e input invalidi, nessun valore privato negli errori', () => {
+test('valid NUT targets and invalid input, no private value in errors', () => {
   for (const value of ['ups', 'ups_1.test-2', 'ups@localhost', 'ups@nut.example.org:3493',
     'ups@192.0.2.1:65535', 'ups@[::1]:3493', 'ups@[2001:db8::1]']) {
     assert.equal(loadConfig({ ...env, GUARDIAN_UPS_NAME: value }).upsName, value);
@@ -704,7 +704,7 @@ test('destinazioni NUT valide e input invalidi, nessun valore privato negli erro
     error => !error.message.includes('private-invalid-value'));
 });
 
-test('opzioni Docker e soglia: valori espliciti e rifiuto di configurazioni ambigue', () => {
+test('Docker and threshold options: explicit values and rejection of ambiguous configurations', () => {
   assert.equal(loadConfig({ ...env, GUARDIAN_DOCKER_ENABLED: 'false' }).dockerEnabled, false);
   assert.equal(loadConfig({ ...env, GUARDIAN_DOCKER_ENABLED: 'true' }).dockerEnabled, true);
   for (const value of ['', '1', 'yes', 'TRUE', 'false;whoami']) {
@@ -716,7 +716,7 @@ test('opzioni Docker e soglia: valori espliciti e rifiuto di configurazioni ambi
   }
 });
 
-test('Docker disabilitato: nessun processo, comando, pulsante o callback, in IT e EN', async context => {
+test('Docker disabled: no process, command, button or callback, in IT and EN', async context => {
   const directory = await temporaryState(context);
   for (const enabled of [undefined, 'false']) {
     const environment = { GUARDIAN_DOCKER_ENABLED: enabled };
@@ -738,13 +738,13 @@ test('Docker disabilitato: nessun processo, comando, pulsante o callback, in IT 
         assert.doesNotMatch(payload.text, /docker/i);
         assert.ok(payload.reply_markup.inline_keyboard.flat().every(b => b.callback_data !== 'docker'));
       }
-      // Anche una chiamata interna alla vista disabilitata non esegue diagnostica.
+      // Even an internal call to the disabled view runs no diagnostics.
       assert.equal(await render('docker', disabled, undefined, language), undefined);
     }
   }
 });
 
-test('Docker abilitato e UPS configurato: diagnostica e interfaccia IT/EN, argomenti isolati', async context => {
+test('Docker enabled and UPS configured: diagnostics and IT/EN interface, isolated arguments', async context => {
   const directory = await temporaryState(context);
   for (const language of ['it', 'en']) {
     const commands = [];
@@ -770,7 +770,7 @@ test('Docker abilitato e UPS configurato: diagnostica e interfaccia IT/EN, argom
   }
 });
 
-test('preavviso assente: blackout, criticità e ripristino conservati senza warning', async () => {
+test('no warning configured: outage, critical state and restore kept without a warning', async () => {
   for (const language of ['it', 'en']) {
     const monitor = new UpsMonitor(loadConfig({ ...env }).shutdownWarningSeconds);
     const sent = [];
@@ -786,7 +786,7 @@ test('preavviso assente: blackout, criticità e ripristino conservati senza warn
   }
 });
 
-test('preavviso configurato: soglia personalizzata, tempo osservato, retry e nuovo episodio IT/EN', async () => {
+test('warning configured: custom threshold, observed time, retries and new episode IT/EN', async () => {
   for (const language of ['it', 'en']) {
     const monitor = new UpsMonitor(loadConfig({ ...env, GUARDIAN_SHUTDOWN_WARNING_SECONDS: '45' }).shutdownWarningSeconds);
     const sent = [];
@@ -812,7 +812,7 @@ test('preavviso configurato: soglia personalizzata, tempo osservato, retry e nuo
   }
 });
 
-test('variabili UPS assenti o non numeriche: dati tecnici e flag conservati in IT/EN', () => {
+test('missing or non-numeric UPS variables: technical data and flags kept in IT/EN', () => {
   for (const language of ['it', 'en']) {
     for (const value of ['', '-1', 'NaN', 'Infinity', 'unknown']) {
       const ups = parseUps(`ups.status: OB LB DISCHRG\nbattery.charge: ${value}\nbattery.runtime: ${value}\nups.load: ${value}\ninput.voltage: ${value}`);
@@ -828,7 +828,7 @@ test('variabili UPS assenti o non numeriche: dati tecnici e flag conservati in I
   }
 });
 
-test('Docker abilitato conserva autorizzazioni chat/utente e rifiuta callback manipolati', async context => {
+test('Docker enabled keeps chat/user authorization and rejects tampered callbacks', async context => {
   const directory = await temporaryState(context);
   const commands = [];
   const rejected = [
@@ -846,7 +846,7 @@ test('Docker abilitato conserva autorizzazioni chat/utente e rifiuta callback ma
 });
 
 
-test('nuova installazione Telegram: inglese senza file o scelta /lang', async context => {
+test('new Telegram installation: English without a file or /lang choice', async context => {
   const directory = await temporaryState(context);
   const result = replies(await offlineBot([message('/help'), message('/lang'), message('/ups')], directory));
   assert.match(result[0].text, /general overview/);
@@ -855,7 +855,7 @@ test('nuova installazione Telegram: inglese senza file o scelta /lang', async co
   assert.deepEqual(await fs.readdir(directory), []);
 });
 
-test('upgrade Telegram: lingua già salvata IT e EN preservata senza riscrittura', async context => {
+test('Telegram upgrade: already saved IT and EN language preserved without rewriting', async context => {
   const directory = await temporaryState(context);
   for (const language of ['it', 'en']) {
     const path = join(directory, 'settings.json');

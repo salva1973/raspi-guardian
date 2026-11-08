@@ -14,7 +14,7 @@ export class Settings {
     warnInvalid = () => console.warn('Invalid or unreadable language settings; using English.'),
     privateFile = false,
   } = {}) {
-    // Il chiamante prepara la directory (systemd per il bot).
+    // The caller prepares the directory (systemd for the bot).
     this.directory = directory;
     this.path = join(directory, filename);
     this.filename = filename;
@@ -36,7 +36,7 @@ export class Settings {
       if (!settings || !isLanguage(settings.language)) throw new Error('Invalid language.');
       this.language = settings.language;
     } catch (error) {
-      // Nessun contenuto del file o dettaglio dell’errore finisce nei log.
+      // No file content or error detail ends up in the logs.
       if (error.code !== 'ENOENT') this.warnInvalid();
     } finally {
       await file?.close();
@@ -49,7 +49,7 @@ export class Settings {
     let file;
     try {
       file = await open(temporary, 'wx', 0o600);
-      // Si salva esclusivamente la lingua, mai la configurazione Telegram.
+      // Only the language is saved, never the Telegram configuration.
       await file.writeFile(`${JSON.stringify({ language })}\n`, 'utf8');
       await file.sync();
       await file.close();
