@@ -4,9 +4,9 @@ This path is for changing or maintaining Raspi Guardian. To install and use it,
 start with [Quick Start](../README.md#quick-start) or [CLI-only](../README.md#cli-only).
 Neither installation path requires a development directory or the test suite.
 
-Raspi Guardian uses native JavaScript modules, Node.js 22, zero NPM dependencies
+Raspi Guardian uses native JavaScript modules, Node.js 22 or newer, zero NPM dependencies
 and no database. The CLI and Telegram bot use the same diagnostic code. Install
-[Linux prerequisites](linux-setup.md#packages-and-nodejs-22) before development.
+[Linux prerequisites](linux-setup.md#packages-and-nodejs) before development.
 
 ## Create a separate development checkout
 

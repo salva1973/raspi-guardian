@@ -1,0 +1,32 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node: [22, 24, 26]
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v5
+        with:
+          node-version: ${{ matrix.node }}
+      - name: Syntax check
+        run: for f in src/*.mjs bin/raspi-guardian tests/*.mjs; do node --check "$f"; done
+      - name: Offline tests
+        run: |
+          mkdir -p .test-tmp
+          TMPDIR="$PWD/.test-tmp" node tests/guardian.test.mjs
+          TMPDIR="$PWD/.test-tmp" node tests/cli.test.mjs
+      - run: git diff --check

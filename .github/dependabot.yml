@@ -1,0 +1,10 @@
+version: 2
+updates:
+  # No NPM dependencies: only the GitHub Actions used by CI.
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    cooldown:
+      default-days: 7

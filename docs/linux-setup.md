@@ -5,7 +5,7 @@ target host as a normal user with `sudo`. Return to [Quick Start](../README.md#q
 or [CLI-only](../README.md#cli-only) after the requested steps. Nothing here
 requires a development checkout. Resolve any failed command before continuing.
 
-## Packages and Node.js 22
+## Packages and Node.js
 
 Use a supported OS with `/proc`, `/sys`, network access and a working system
 clock. Raspberry Pi OS 64-bit is suitable for recent Raspberry Pi models.
@@ -23,7 +23,7 @@ skip it):
 sudo apt-get install python3
 ```
 
-Check whether a system-wide Node.js 22 is already available:
+Check whether a system-wide Node.js 22 or newer is already available:
 
 ```bash
 command -v node
@@ -32,15 +32,15 @@ node --version
 ```
 
 On a new system, missing-command errors at this check are expected. If both
-version commands report `v22.x`, continue to NUT or return to the README. A Node
+version commands report `v22.x` or newer (for example `v24.x` or `v26.x`), continue to NUT or return to the README. A Node
 installation under a user's home or shell version manager is unsuitable for
 the hardened system service, which cannot access home directories.
 
-If `/usr/bin/node` does not provide Node 22, the block below installs the official
-Node 22 executable at `/usr/local/bin/node`, without replacing a distribution
+If `/usr/bin/node` does not provide Node.js 22 or newer, the block below installs the official
+Node.js executable of the LTS line set in `node_major` (26 here) at `/usr/local/bin/node`, without replacing a distribution
 package. It selects the binary by **OS architecture** (`arm64`, `armhf` or
 `amd64`), verifies its SHA-256 checksum and needs no NPM packages. These binaries
-require a compatible OS; see [Node 22 supported platforms](https://github.com/nodejs/node/blob/v22.x/BUILDING.md#platform-list).
+require a compatible OS; see [Node.js supported platforms](https://github.com/nodejs/node/blob/main/BUILDING.md#platform-list).
 Older ARMv6 hardware is outside this recipe.
 
 The block stops if `/usr/local/bin/node` already exists: inspect and update that
@@ -61,9 +61,10 @@ esac
 node_tmp=$(mktemp -d)
 trap 'rm -rf "$node_tmp"' EXIT
 cd "$node_tmp"
-node_base=https://nodejs.org/download/release/latest-v22.x
+node_major=26
+node_base=https://nodejs.org/download/release/latest-v$node_major.x
 curl --fail --silent --show-error --location "$node_base/SHASUMS256.txt" -o SHASUMS256.txt
-node_archive=$(awk -v arch="$node_arch" '$2 ~ ("^node-v22\\.[0-9]+\\.[0-9]+-linux-" arch "\\.tar\\.xz$") {print $2}' SHASUMS256.txt)
+node_archive=$(awk -v arch="$node_arch" -v major="$node_major" '$2 ~ ("^node-v" major "\\.[0-9]+\\.[0-9]+-linux-" arch "\\.tar\\.xz$") {print $2}' SHASUMS256.txt)
 test -n "$node_archive"
 curl --fail --silent --show-error --location "$node_base/$node_archive" -o "$node_archive"
 awk -v archive="$node_archive" '$2 == archive {print}' SHASUMS256.txt | sha256sum --check -
@@ -74,9 +75,9 @@ sudo install -o root -g root -m 0755 "${node_archive%.tar.xz}/bin/node" /usr/loc
 )
 ```
 
-The archive and checksum list come from the [official Node 22 release directory](https://nodejs.org/download/release/latest-v22.x/).
+The archive and checksum list come from the official release directory of that line (for 26: <https://nodejs.org/download/release/latest-v26.x/>).
 This installs the runtime needed by Raspi Guardian; NPM is not required. For
-future Node security updates, use a reviewed Node 22 release and your chosen
+future Node security updates, use a reviewed release of a supported Node.js line and your chosen
 system-wide installation method.
 
 Ensure the CLI finds this Node in the current shell:
@@ -85,13 +86,13 @@ Ensure the CLI finds this Node in the current shell:
 export PATH="/usr/local/bin:$PATH"
 hash -r
 node --version
-node -e 'if (process.versions.node.split(".")[0] !== "22") process.exit(1)'
+node -e 'if (Number(process.versions.node.split(".")[0]) < 22) process.exit(1)'
 ```
 
 Continue only after this check succeeds. Keep `/usr/local/bin` in your login
 `PATH` for future SSH sessions. [Quick Start step 6](../README.md#6-install-systemd-and-enable-automatic-startup)
 includes the local systemd override needed when `/usr/bin/node` does not provide
-Node 22. CLI-only users need no systemd override.
+Node.js 22 or newer. CLI-only users need no systemd override.
 
 ## NUT setup
 

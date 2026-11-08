@@ -35,7 +35,7 @@ Select an image for full size, or go to [Quick Start](#quick-start).
 - Linux with systemd, `/proc` and `/sys`; installation examples target Debian,
   Raspberry Pi OS and compatible distributions.
 - An SSH or local Bash terminal and an administrator account with `sudo`.
-- Node.js **22**, installed system-wide using the Linux setup guide below.
+- Node.js **22 or newer** (CI tests 22, 24 and 26), installed system-wide using the Linux setup guide below.
 - NUT client `/usr/bin/upsc` and util-linux `/usr/bin/findmnt`.
 - A working NUT server exposing one UPS, locally or over a trusted network.
 - For Telegram only: a bot, one authorized chat ID and one authorized user ID;
@@ -58,8 +58,8 @@ For an existing service, use the [update and rollback guide](docs/development.md
 
 ### 1. Install prerequisites and download Raspi Guardian
 
-Complete [Linux packages and Node.js 22](docs/linux-setup.md#packages-and-nodejs-22),
-then return here. That guide includes a complete Node 22 installation when the
+Complete [Linux packages and Node.js](docs/linux-setup.md#packages-and-nodejs),
+then return here. That guide includes a complete Node.js LTS installation when the
 distribution does not provide it. No NPM packages or build step are required.
 
 The official public repository is [salva1973/raspi-guardian](https://github.com/salva1973/raspi-guardian).
@@ -169,17 +169,17 @@ Install the supplied unit:
 sudo install -o root -g root -m 0644 /opt/raspi-guardian/systemd/raspi-guardian.service /etc/systemd/system/raspi-guardian.service
 ```
 
-The public unit uses `/usr/bin/node`. If the Linux setup guide installed Node 22
+The public unit uses `/usr/bin/node`. If the Linux setup guide installed Node.js
 at `/usr/local/bin/node`, run this block to select it in a local override.
-The block does nothing when `/usr/bin/node` already supplies Node 22:
+The block does nothing when `/usr/bin/node` already supplies Node.js 22 or newer:
 
 ```bash
 (
 set -eu
-case "$(/usr/bin/node --version 2>/dev/null || true)" in
-    v22.*) ;;
+case "$(/usr/bin/node -e 'console.log(Number(process.versions.node.split(".")[0]) >= 22 ? "ok" : "old")' 2>/dev/null || true)" in
+    ok) ;;
     *)
-        /usr/local/bin/node -e 'if (process.versions.node.split(".")[0] !== "22") process.exit(1)'
+        /usr/local/bin/node -e 'if (Number(process.versions.node.split(".")[0]) < 22) process.exit(1)'
         sudo install -d -o root -g root -m 0755 /etc/systemd/system/raspi-guardian.service.d
         sudo tee /etc/systemd/system/raspi-guardian.service.d/node.conf > /dev/null <<'UNIT'
 [Service]
@@ -230,7 +230,7 @@ Use this path for SSH diagnostics without creating a Telegram bot, service
 account, credential file or systemd service.
 
 1. Complete [Quick Start step 1](#1-install-prerequisites-and-download-raspi-guardian)
-   for Linux tools, Node 22 and the source download.
+   for Linux tools, Node.js and the source download.
 2. Run the file-copy block in [step 4](#4-install-the-application-files).
    Skip it if `/opt/raspi-guardian` was already installed with Quick Start.
 3. Continue below. For `status` and `ups`, also configure a readable NUT
