@@ -56,7 +56,7 @@ function runLocal(name, signal, config) {
       maxBuffer: 1024 * 1024,
       signal,
       env: { PATH: '/usr/sbin:/usr/bin:/sbin:/bin', LANG: 'C', LC_ALL: 'C' },
-    }, (error, stdout) => error ? reject(new Error('Diagnostica locale non disponibile.')) : resolve(stdout));
+    }, (error, stdout) => error ? reject(new Error('Local diagnostics unavailable.')) : resolve(stdout));
   });
 }
 
@@ -69,7 +69,7 @@ export function parseUps(text) {
   // OL and OB together, or both missing, do not confirm the power state.
   const power = flags.has('OB') && !flags.has('OL') ? 'battery'
     : flags.has('OL') && !flags.has('OB') ? 'online' : 'unknown';
-  if (power === 'unknown') throw new Error('Stato alimentazione UPS non valido.');
+  if (power === 'unknown') throw new Error('Invalid UPS power state.');
   return { data, flags, power, critical: flags.has('LB') || flags.has('FSD') };
 }
 
@@ -132,7 +132,7 @@ export function compactRows(header, rows, language = 'en') {
 export function disksText(output, importantMounts, language = 'en') {
   const mounts = JSON.parse(output).filesystems;
   if (!Array.isArray(mounts) || !mounts.length || mounts.some(m => typeof m.target !== 'string')) {
-    throw new Error('Elenco filesystem non valido.');
+    throw new Error('Invalid filesystem list.');
   }
   const mounted = new Set(mounts.map(m => m.target));
   const missing = importantMounts.filter(p => !mounted.has(p));

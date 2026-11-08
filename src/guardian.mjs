@@ -16,7 +16,7 @@ export function loadConfig(env) {
   if (!/^\d+:[A-Za-z0-9_-]+$/.test(env.TELEGRAM_BOT_TOKEN ?? '') ||
       !/^-?[1-9]\d*$/.test(env.TELEGRAM_CHAT_ID ?? '') ||
       !/^[1-9]\d*$/.test(env.TELEGRAM_ALLOWED_USER_ID ?? '')) {
-    throw new Error('Configurazione Telegram mancante o non valida. Controllare le tre variabili richieste.');
+    throw new Error('Missing or invalid Telegram configuration. Check the three required variables.');
   }
   const diagnostics = loadDiagnosticConfig(env);
   const warning = env.GUARDIAN_SHUTDOWN_WARNING_SECONDS;
@@ -87,7 +87,7 @@ export function authorizedAction(update, config) {
 
 class TelegramError extends Error {
   constructor(code, retryAfter = 0) {
-    super('Richiesta Telegram non riuscita.');
+    super('Telegram request failed.');
     this.code = code;
     this.retryAfter = retryAfter;
   }
@@ -179,10 +179,10 @@ async function monitorUps(api, config, signal, settings) {
     let ups;
     try {
       ups = await readUps(config, signal);
-      if (unavailable) console.info('Lettura UPS nuovamente disponibile.');
+      if (unavailable) console.info('UPS reading available again.');
       unavailable = false;
     } catch {
-      if (!signal.aborted && !unavailable) console.warn('Lettura UPS non disponibile; stato precedente conservato.');
+      if (!signal.aborted && !unavailable) console.warn('UPS reading unavailable; previous state kept.');
       unavailable = true;
     }
     if (ups && !signal.aborted) {
@@ -191,7 +191,7 @@ async function monitorUps(api, config, signal, settings) {
           chat_id: config.chatId, text, parse_mode: 'HTML', reply_markup: keyboard('ups', settings.language, config),
         }), () => settings.language);
       } catch {
-        if (!signal.aborted) console.warn('Invio avviso UPS non riuscito; nuovo tentativo al prossimo controllo.');
+        if (!signal.aborted) console.warn('Sending the UPS alert failed; retrying at the next check.');
       }
     }
     await pause(UPS_INTERVAL_MS, signal);
@@ -209,10 +209,10 @@ async function poll(api, config, signal, botUsername, settings) {
     } catch (error) {
       if (signal.aborted) return;
       if ([401, 404, 409].includes(error.code)) {
-        console.error('Polling interrotto: verificare credenziali, webhook assente e singola istanza del bot.');
-        throw new Error('Polling non disponibile.');
+        console.error('Polling stopped: check the credentials, that no webhook is set and that only one bot instance is running.');
+        throw new Error('Polling unavailable.');
       }
-      console.warn('Polling Telegram non disponibile; nuovo tentativo automatico.');
+      console.warn('Telegram polling unavailable; retrying automatically.');
       await pause(Math.max(backoff, (error.retryAfter ?? 0) * 1000), signal);
       backoff = Math.min(backoff * 2, 30_000);
       continue;
@@ -244,7 +244,7 @@ async function poll(api, config, signal, botUsername, settings) {
         }
         await api(action.callbackId ? 'editMessageText' : 'sendMessage', payload);
       } catch (error) {
-        if (!signal.aborted && error.code !== 'MESSAGE_NOT_MODIFIED') console.warn('Risposta Telegram non riuscita.');
+        if (!signal.aborted && error.code !== 'MESSAGE_NOT_MODIFIED') console.warn('Telegram reply failed.');
       }
     }
   }
@@ -272,7 +272,7 @@ export async function main({ stateDirectory } = {}) {
   const api = telegramClient(config, controller.signal);
   try {
     const bot = await api('getMe');
-    console.info('Raspi Guardian avviato: long polling e monitoraggio UPS attivi.');
+    console.info('Raspi Guardian started: long polling and UPS monitoring active.');
     const tasks = [poll(api, config, controller.signal, bot.username, settings), monitorUps(api, config, controller.signal, settings)];
     try {
       await Promise.all(tasks);
@@ -282,21 +282,21 @@ export async function main({ stateDirectory } = {}) {
     }
   } catch {
     if (!requestedStop) {
-      console.error('Avvio o esecuzione non riusciti. Verificare rete e configurazione Telegram.');
+      console.error('Startup or run failed. Check the network and the Telegram configuration.');
       process.exitCode = 1;
     }
   } finally {
     controller.abort();
     process.removeListener('SIGTERM', stop);
     process.removeListener('SIGINT', stop);
-    console.info('Raspi Guardian arrestato.');
+    console.info('Raspi Guardian stopped.');
   }
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   // Do not print stacks/fetch errors: request URLs include the token.
   main().catch(() => {
-    console.error('Errore interno. Nessun dettaglio sensibile registrato.');
+    console.error('Internal error. No sensitive details logged.');
     process.exitCode = 1;
   });
 }

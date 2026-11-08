@@ -257,7 +257,7 @@ test('real entry point and PATH link: exits without token, network or Telegram s
     });
     assert.ifError(result.error);
     assert.equal(result.status, expectedCode, result.stderr);
-    assert.doesNotMatch(result.stdout + result.stderr, /UNEXPECTED_NETWORK|avviato|polling|arrestato|fictional_test_only/);
+    assert.doesNotMatch(result.stdout + result.stderr, /UNEXPECTED_NETWORK|Raspi Guardian started|polling|Raspi Guardian stopped|fictional_test_only/);
     assert.doesNotMatch(result.stdout, ESCAPE);
   }
   const executable = await launch(link, ['help'], { env, encoding: 'utf8', timeout: 3000 });

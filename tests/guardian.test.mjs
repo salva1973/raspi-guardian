@@ -348,7 +348,7 @@ test('polling conflict: error exit and logs without token or remote descriptions
   try {
     await main({ stateDirectory });
     assert.equal(process.exitCode, 1);
-    assert.ok(logs.some(text => text.includes('Polling interrotto')));
+    assert.ok(logs.some(text => text.includes('Polling stopped')));
     assert.ok(logs.every(text => !text.includes(env.TELEGRAM_BOT_TOKEN) && !text.includes('private-response')));
   } finally {
     process.exitCode = originalExitCode;
